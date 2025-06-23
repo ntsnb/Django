@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI视频理解平台</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #64748b;
+            --success-color: #10b981;
+            --bg-light: #f8fafc;
+            --border-color: #e2e8f0;
+            --text-muted: #64748b;
+        }
+
+        body {
+            background-color: var(--bg-light);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .main-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #1e40af 100%);
+            color: white;
+            padding: 1rem 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .main-container {
+            min-height: calc(100vh - 80px);
+            padding: 2rem 0;
+        }
+
+        .video-section {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 3rem 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: #fafbfc;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary-color);
+            background: #f0f7ff;
+            transform: translateY(-2px);
+        }
+
+        .upload-area.dragover {
+            border-color: var(--success-color);
+            background: #f0fdf4;
+        }
+
+        .video-player {
+            width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin-top: 1rem;
+        }
+
+        .chat-section {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            height: 600px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border-color);
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #1e40af 100%);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            background: #fafbfc;
+        }
+
+        .message {
+            margin-bottom: 1rem;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            text-align: right;
+        }
+
+        .message.ai {
+            text-align: left;
+        }
+
+        .message-bubble {
+            display: inline-block;
+            max-width: 70%;
+            padding: 0.75rem 1rem;
+            border-radius: 18px;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-bubble {
+            background: var(--primary-color);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.ai .message-bubble {
+            background: white;
+            color: #374151;
+            border: 1px solid var(--border-color);
+            border-bottom-left-radius: 4px;
+        }
+
+        .chat-input {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border-color);
+            background: white;
+            border-radius: 0 0 12px 12px;
+        }
+
+        .input-group {
+            position: relative;
+        }
+
+        .form-control {
+            border: 1px solid var(--border-color);
+            border-radius: 25px;
+            padding: 0.75rem 1rem;
+            padding-right: 3rem;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .send-btn {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--primary-color);
+            border: none;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .send-btn:hover {
+            background: #1e40af;
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+
+        .feature-badge {
+            background: var(--primary-color);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            margin-left: 0.5rem;
+        }
+
+        .video-info {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success-color);
+            display: inline-block;
+            margin-right: 0.5rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .welcome-message {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 2rem;
+            font-style: italic;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .progress-bar-container {
+            margin-top: 1rem;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 1rem 0;
+            }
+
+            .video-section,
+            .chat-section {
+                margin-bottom: 1rem;
+            }
+
+            .chat-section {
+                height: 500px;
+            }
+
+            .message-bubble {
+                max-width: 85%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 主要头部 -->
+    <header class="main-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h1 class="h3 mb-0">
+                        <i class="fas fa-video me-2"></i>
+                        AI视频理解平台
+                        <span class="feature-badge">Beta</span>
+                    </h1>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <small class="opacity-75">
+                        <i class="fas fa-robot me-1"></i>
+                        智能视频分析 | 多模态理解
+                    </small>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要内容区域 -->
+    <div class="main-container">
+        <div class="container-fluid">
+            <div class="row">
+                <!-- 左侧视频区域 -->
+                <div class="col-lg-8">
+                    <div class="video-section">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h4 class="mb-0">
+                                <i class="fas fa-upload me-2 text-primary"></i>
+                                视频上传与预览
+                            </h4>
+                            <div class="d-flex align-items-center text-muted">
+                                <span class="status-indicator"></span>
+                                <small>系统就绪</small>
+                            </div>
+                        </div>
+
+                        <!-- 上传区域 -->
+                        <div class="upload-area" id="uploadArea">
+                            <input type="file" class="file-input" id="videoInput" accept="video/*">
+                            <div class="upload-content">
+                                <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                                <h5>拖拽视频文件到此处或点击上传</h5>
+                                <p class="text-muted mb-3">支持 MP4, AVI, MOV, WMV 格式，最大 500MB</p>
+                                <button class="btn btn-primary btn-lg">
+                                    <i class="fas fa-folder-open me-2"></i>
+                                    选择视频文件
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 进度条 -->
+                        <div class="progress-bar-container">
+                            <div class="progress">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
+                                    style="width: 0%"></div>
+                            </div>
+                            <small class="text-muted mt-2">上传中...</small>
+                        </div>
+
+                        <!-- 视频播放器（初始隐藏） -->
+                        <video class="video-player d-none" id="videoPlayer" controls>
+                            您的浏览器不支持视频播放。
+                        </video>
+
+                        <!-- 视频信息 -->
+                        <div class="video-info d-none" id="videoInfo">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <small class="text-muted">文件名：</small>
+                                    <div class="fw-bold" id="fileName">-</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <small class="text-muted">大小：</small>
+                                    <div class="fw-bold" id="fileSize">-</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <small class="text-muted">时长：</small>
+                                    <div class="fw-bold" id="fileDuration">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右侧聊天区域 -->
+                <div class="col-lg-4">
+                    <div class="chat-section">
+                        <div class="chat-header">
+                            <i class="fas fa-robot"></i>
+                            <div>
+                                <div class="fw-bold">AI 视频助手</div>
+                                <small class="opacity-75">多模态智能分析</small>
+                            </div>
+                            <div class="ms-auto">
+                                <span class="status-indicator"></span>
+                            </div>
+                        </div>
+
+                        <div class="chat-messages" id="chatMessages">
+                            <div class="welcome-message">
+                                <i class="fas fa-robot fa-2x mb-3 text-primary"></i>
+                                <p>欢迎使用AI视频理解平台！</p>
+                                <p>上传视频后，我可以帮您分析视频内容、回答相关问题。</p>
+                                <div class="mt-3">
+                                    <small class="text-muted">
+                                        <i class="fas fa-lightbulb me-1"></i>
+                                        提示：支持视频摘要、场景识别、对象检测等功能
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="chat-input">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="messageInput" placeholder="输入您的问题..."
+                                    disabled>
+                                <button class="send-btn" id="sendBtn" disabled>
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted mt-2">
+                                <i class="fas fa-info-circle me-1"></i>
+                                请先上传视频再开始对话
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // DOM 元素引用
+        let currentVideoName = null;
+        let conversationsData = null;
+        let conversationHistory = [];
+        const uploadArea = document.getElementById('uploadArea');
+        const videoInput = document.getElementById('videoInput');
+        const videoPlayer = document.getElementById('videoPlayer');
+        const videoInfo = document.getElementById('videoInfo');
+        const progressContainer = document.querySelector('.progress-bar-container');
+        const progressBar = document.querySelector('.progress-bar');
+        const chatMessages = document.getElementById('chatMessages');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+
+
+        // 上传区域点击事件
+        uploadArea.addEventListener('click', () => {
+            videoInput.click();
+        });
+
+        // 拖拽事件处理
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileUpload(files[0]);
+            }
+        });
+
+        // 文件选择事件
+        videoInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileUpload(e.target.files[0]);
+            }
+        });
+
+        // 文件上传处理
+        function handleFileUpload(file) {
+            if (!file.type.startsWith('video/')) {
+                alert('请选择视频文件！');
+                return;
+            }
+
+            // 显示进度条
+            progressContainer.style.display = 'block';
+
+            // 创建FormData对象
+            const formData = new FormData();
+            formData.append('video', file);
+
+            // 获取CSRF token
+            const csrfToken = getCookie('csrftoken');
+
+            // 使用XMLHttpRequest上传文件并显示进度
+            const xhr = new XMLHttpRequest();
+
+            // 上传进度监听
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable) {
+                    const percentComplete = (e.loaded / e.total) * 100;
+                    progressBar.style.width = percentComplete + '%';
+                }
+            });
+
+            // 上传完成监听
+            xhr.addEventListener('load', () => {
+                if (xhr.status === 200) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response.success) {
+                            // 传递文件对象以确保视频能播放
+                            // favicon(file, response.video_name, response.video_path);
+                            currentVideoName = response.video_name;
+                            showVideo(file, response.video_name, response.video_path);
+                            addMessage('ai', `视频 "${response.video_name}" 上传成功！我现在可以帮您分析视频内容了。您可以问我关于视频中的场景、对象、动作等任何问题。`);
+
+                            // loadConversationData();
+
+                        } else {
+                            alert('上传失败: ' + response.error);
+                        }
+                    } catch (e) {
+                        console.error('响应解析失败:', e);
+                        // 即使服务器响应解析失败，也尝试显示视频
+                        currentVideoName = file.name;
+                        showVideo(file, file.name, null);
+                        addMessage('ai', `视频上传完成！我现在可以帮您分析视频内容了。`);
+                        // loadConversationData();
+                    }
+                } else {
+                    alert('上传失败，请重试');
+                }
+                progressContainer.style.display = 'none';
+            });
+
+            // 上传错误监听
+            xhr.addEventListener('error', () => {
+                console.warn('上传请求失败，可能是服务器未运行，使用本地模式');
+                // 如果服务器不可用，仍然显示视频（本地模式）
+                currentVideoName = file.name;
+                showVideo(file, file.name, null);
+                addMessage('ai', `视频加载成功！当前为演示模式，请启动Django服务器以获得完整功能。`);
+                progressContainer.style.display = 'none';
+            });
+
+            // 发送请求
+            xhr.open('POST', '/upload_video/', true);
+            xhr.setRequestHeader('X-CSRFToken', csrfToken);
+            xhr.send(formData);
+        }
+
+        // async function loadConversationData() {
+        //     try {
+        //         // 这里需要替换为您的JSON文件路径
+        //         const response = await fetch('/path/to/your/conversations.json');
+        //         if (response.ok) {
+        //             conversationsData = await response.json();
+        //             console.log('对话数据加载成功');
+        //         } else {
+        //             console.warn('无法加载对话数据文件');
+        //         }
+        //     } catch (error) {
+        //         console.error('加载对话数据失败:', error);
+        //     }
+        // }
+
+        function getAIResponseForVideo(videoName) {
+            if (!conversationsData || !videoName) {
+                return '抱歉，无法获取对应的分析内容。';
+            }
+
+            // 查找匹配的视频记录
+            const matchingRecord = conversationsData.find(record =>
+                record.video === videoName
+            );
+
+            if (matchingRecord && matchingRecord.conversations) {
+                // 查找来自GPT的回复
+                const gptResponse = matchingRecord.conversations.find(conv =>
+                    conv.from === 'gpt'
+                );
+
+                if (gptResponse && gptResponse.value) {
+                    return gptResponse.value;
+                }
+            }
+            // 如果没找到匹配的内容，返回默认消息
+            return '我正在分析您的视频内容，但暂时无法找到预设的分析结果。请稍后再试。';
+        }
+
+
+
+
+        // 显示视频
+        function showVideo(file, videoName, videoPath) {
+            // 优先使用本地对象URL以确保能播放，服务器路径作为备选
+            let url;
+            if (file) {
+                // 如果有文件对象，使用本地URL（确保能播放）
+                url = URL.createObjectURL(file);
+            } else if (videoPath) {
+                // 如果只有服务器路径，使用服务器路径
+                url = videoPath;
+            } else {
+                console.error('没有可用的视频源');
+                return;
+            }
+
+            videoPlayer.src = url;
+            videoPlayer.classList.remove('d-none');
+
+            // 添加错误处理
+            videoPlayer.onerror = function () {
+                console.error('视频加载失败，尝试使用备选源');
+                if (videoPath && url !== videoPath) {
+                    // 如果本地URL失败，尝试服务器路径
+                    videoPlayer.src = videoPath;
+                } else {
+                    alert('视频加载失败，请重新上传');
+                }
+            };
+
+            // 显示视频信息
+            document.getElementById('fileName').textContent = videoName || file.name;
+            document.getElementById('fileSize').textContent = formatFileSize(file.size);
+
+            videoPlayer.addEventListener('loadedmetadata', () => {
+                document.getElementById('fileDuration').textContent = formatDuration(videoPlayer.duration);
+            });
+
+            videoInfo.classList.remove('d-none');
+
+            // 启用聊天功能
+            messageInput.disabled = false;
+            sendBtn.disabled = false;
+            messageInput.placeholder = '请描述您想了解的视频内容...';
+        }
+        async function getAIResponse(message) {
+            try {
+                const response = await fetch('/api/chat/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        history: conversationHistory
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    conversationHistory.push(
+                        { role: 'user', content: message },
+                        { role: 'assistant', content: data.message }
+                    );
+                    return data.message;
+                }
+                throw new Error(data.error);
+            } catch (error) {
+                console.error('AI调用失败:', error);
+                return null;
+            }
+        }
+
+
+        // 发送消息
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message) {
+                addMessage('user', message);
+                messageInput.value = '';
+
+                addMessage('ai', '我正在思考您的问题...');
+
+                // 调用真实AI
+                getAIResponse(message).then(aiResponse => {
+                    // 移除思考消息
+                    const chatMessages = document.getElementById('chatMessages');
+                    if (chatMessages.lastElementChild) {
+                        chatMessages.removeChild(chatMessages.lastElementChild);
+                    }
+
+                    if (aiResponse) {
+                        // 有AI回复，使用AI回复
+                        addMessage('ai', aiResponse);
+                    } else {
+                        // AI失败，使用原有逻辑
+                        const responses = [
+                            '我正在分析您的视频内容,请稍候...',
+                            '根据视频分析,我发现了以下内容...',
+                            '这个视频中包含了有趣的场景,让我为您详细分析...',
+                            '我已经完成了对视频的理解,这是我的分析结果...'
+                        ];
+                        const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                        addMessage('ai', randomResponse);
+
+                        // 如果有原有的getAIResponseForVideo函数，继续使用
+                        if (currentVideoName && typeof getAIResponseForVideo === 'function') {
+                            setTimeout(() => {
+                                const aiResponse = getAIResponseForVideo(currentVideoName);
+                                addMessage('ai', aiResponse);
+                            }, 1000);
+                        }
+                    }
+                });
+            }
+        }
+
+        // 发送消息（修改后的版本）
+        // function sendMessage() {
+        //     const message = messageInput.value.trim();
+        //     if (message) {
+        //         addMessage('user', message);
+        //         messageInput.value = '';
+
+        //         // 获取基于当前视频的AI回复
+        //         setTimeout(() => {
+        //             const aiResponse = getAIResponseForVideo(currentVideoName);
+        //             addMessage('ai', aiResponse);
+        //         }, 1000);
+        //     }
+        // }
+
+
+        //  // 发送消息到AI
+        // async function sendMessage() {
+        //     const message = messageInput.value.trim();
+        //     if (!message || isProcessing) return;
+
+        //     // 添加用户消息
+        //     addMessage('user', message);
+        //     messageInput.value = '';
+
+        //     // 设置处理状态
+        //     isProcessing = true;
+        //     updateSendButton(true);
+
+        //     // 添加AI思考提示
+        //     const thinkingId = addMessage('ai', '', 'thinking');
+        //     showTypingIndicator(thinkingId);
+
+        //     try {
+        //         // 调用真实API
+        //         const response = await callVideoUnderstandingAPI(message);
+
+        //         // 移除思考提示
+        //         removeMessage(thinkingId);
+
+        //         // 添加AI回复
+        //         addMessage('ai', response);
+
+        //         // 添加到对话历史
+        //         conversationHistory.push({
+        //             user: message,
+        //             ai: response,
+        //             timestamp: new Date().toISOString()
+        //         });
+
+        //     } catch (error) {
+        //         console.error('API调用失败:', error);
+
+        //         // 移除思考提示
+        //         removeMessage(thinkingId);
+
+        //         // 显示错误信息或降级响应
+        //         const fallbackResponse = getFallbackResponse(message, error);
+        //         addMessage('ai', fallbackResponse, error.apiError ? 'error' : 'warning');
+        //     } finally {
+        //         isProcessing = false;
+        //         updateSendButton(false);
+        //     }
+        // }
+
+        // // 调用视频理解API
+        // async function callVideoUnderstandingAPI(question) {
+        //     if (!currentVideo) {
+        //         throw new Error('没有可用的视频');
+        //     }
+
+        //     const requestData = {
+        //         question: question,
+        //         video_id: currentVideo.id,
+        //         conversation_history: conversationHistory.slice(-5) // 保留最近5轮对话作为上下文
+        //     };
+
+        //     const response = await fetch('/api/video_understanding/', {
+        //         method: 'POST',
+        //         headers: {
+        //             'Content-Type': 'application/json',
+        //             'X-CSRFToken': getCookie('csrftoken')
+        //         },
+        //         body: JSON.stringify(requestData)
+        //     });
+
+        //     if (!response.ok) {
+        //         const errorData = await response.json().catch(() => ({}));
+        //         const error = new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+        //         error.apiError = true;
+        //         throw error;
+        //     }
+
+        //     const data = await response.json();
+
+        //     if (!data.success) {
+        //         const error = new Error(data.error || '处理失败');
+        //         error.apiError = true;
+        //         throw error;
+        //     }
+
+        //     return data.response;
+        // }
+
+        // 添加消息到聊天界面
+        function addMessage(sender, content) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = 'message-bubble';
+            bubbleDiv.textContent = content;
+
+            messageDiv.appendChild(bubbleDiv);
+            chatMessages.appendChild(messageDiv);
+
+            // 滚动到底部
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // 如果是第一条消息，清除欢迎信息
+            const welcomeMsg = chatMessages.querySelector('.welcome-message');
+            if (welcomeMsg && chatMessages.children.length > 1) {
+                welcomeMsg.remove();
+            }
+        }
+
+        // 发送按钮事件
+        sendBtn.addEventListener('click', sendMessage);
+
+        // 回车发送
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // 工具函数
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function formatDuration(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // 获取CSRF Token的函数
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+</body>
+
+</html>
